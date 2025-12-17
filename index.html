@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Interview Readiness Analyzer</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="container">
+    <h1>AI Interview Readiness Analyzer</h1>
+    <p class="subtitle">Role-based resume analysis with AI</p>
+
+    <label>Select Job Role</label>
+    <select id="roleSelect">
+        <option value="aiml">AI / ML Engineer</option>
+        <option value="data_scientist">Data Scientist</option>
+        <option value="software_engineer">Software Engineer</option>
+    </select>
+
+    <label>Resume / Skills</label>
+    <textarea id="resumeText" placeholder="e.g. python machine learning sql"></textarea>
+
+    <label>Job Description (Optional)</label>
+    <textarea id="jdText" placeholder="Paste job description here"></textarea>
+
+    <button onclick="analyzeResume()">Analyze</button>
+    <button class="secondary" onclick="downloadReport()">Download PDF</button>
+
+    <div id="result" class="result-box"></div>
+</div>
+
+<script>
+let lastResult = null;
+
+function analyzeResume() {
+    fetch("/analyze", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            resume: document.getElementById("resumeText").value,
+            job_description: document.getElementById("jdText").value,
+            role: document.getElementById("roleSelect").value
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        lastResult = data;
+        document.getElementById("result").innerHTML = `
+            <h3>Role: ${data.selected_role}</h3>
+            <h3>Readiness: ${data.interview_readiness}</h3>
+            <h3>Score: ${data.readiness_score}/100</h3>
+            <p><b>JD Match:</b> ${data.jd_match_percentage}%</p>
+            <p><b>Missing Skills:</b> ${data.missing_skills.join(", ") || "None 🎉"}</p>
+        `;
+    });
+}
+
+function downloadReport() {
+    if (!lastResult) {
+        alert("Analyze resume first");
+        return;
+    }
+
+    fetch("/download-report", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(lastResult)
+    })
+    .then(res => res.blob())
+    .then(blob => {
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "Interview_Readiness_Report.pdf";
+        link.click();
+    });
+}
+</script>
+
+</body>
+</html>
